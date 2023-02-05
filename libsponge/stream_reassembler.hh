@@ -3,8 +3,13 @@
 
 #include "byte_stream.hh"
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <queue>
+
+
+
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
@@ -14,6 +19,22 @@ class StreamReassembler {
 
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
+    size_t _header;      //!< The current head index
+    size_t _unorderSize; //!< The unordered part size;
+    struct UnorderSubstring{
+      std::string _data;
+      size_t _index;
+      bool _eof;
+      UnorderSubstring(const std::string& data, const size_t index, const bool eof):_data(data), _index(index), _eof(eof){}
+    };
+
+    struct cmp{
+      bool operator()(UnorderSubstring left, UnorderSubstring right){
+        if(left._index == right._index) return left._index < right._index;
+        return left._index < right._index;
+      }
+    };
+    std::priority_queue<UnorderSubstring, std::vector<UnorderSubstring>, cmp> _UnorderQueue;
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
